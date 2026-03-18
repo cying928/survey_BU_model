@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model 資料查詢系統</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #333;
+        }
+        h2 { text-align: center; }
+        
+        #statusMessage {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        #searchInput {
+            width: 80%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 25px;
+            outline: none;
+        }
+        #searchInput:focus { border-color: #4CAF50; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+        tr:hover { background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+
+    <h2>🔍 Model 資料查詢系統</h2>
+    
+    <div id="statusMessage">⏳ 正在連線並讀取 Google 試算表資料...</div>
+    
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="請輸入 Model, CUST 或 BU 關鍵字進行查詢...">
+    </div>
+
+    <table id="dataTable"></table>
+
+    <script>
+        // 已經為您填入正確的 CSV 網址！
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTKRWMaUXfn2V0IY2CTs6kbGggWl6WVdi45mJoY8FyStN10p90ctw3DSPtujpWT3GJgjDgUfAMY6XJw/pub?gid=1741447070&single=true&output=csv'; 
+        
+        let allData = []; 
+        const statusDiv = document.getElementById('statusMessage');
+
+        fetch(csvUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('網路回應異常');
+                return response.text();
+            })
+            .then(csvText => {
+                // 使用正則表達式相容不同的換行符號 (\r\n 或 \n)
+                const rows = csvText.split(/\r?\n/);
+                allData = rows.map(row => row.split(','));
+                
+                const dataCount = allData.length - 1;
+
+                statusDiv.style.backgroundColor = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.innerHTML = `✅ 資料讀取成功！已載入 ${dataCount} 筆資料。`;
+                
+                renderTable(allData);
+            })
+            .catch(error => {
+                statusDiv.style.backgroundColor = '#ffebee';
+                statusDiv.style.color = '#c62828';
+                statusDiv.innerHTML = `❌ 資料讀取失敗！(錯誤細節: ${error.message})`;
+                console.error('讀取資料失敗:', error);
+            });
+
+        function renderTable(data) {
+            const table = document.getElementById('dataTable');
+            table.innerHTML = ''; 
+
+            data.forEach((row, index) => {
+                if (row.length < 3 || row[0].trim() === '') return; 
+
+                const tr = document.createElement('tr');
+                row.forEach(cell => {
+                    const cellElement = document.createElement(index === 0 ? 'th' : 'td');
+                    cellElement.textContent = cell.replace(/(^"|"$)/g, '').trim(); 
+                    tr.appendChild(cellElement);
+                });
+                table.appendChild(tr);
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const keyword = e.target.value.toLowerCase().trim();
+            
+            const filteredData = allData.filter((row, index) => {
+                if (index === 0) return true; 
+                return row.some(cell => cell.toLowerCase().includes(keyword));
+            });
+
+            renderTable(filteredData);
+        });
+    </script>
+
+</body>
+</html>
